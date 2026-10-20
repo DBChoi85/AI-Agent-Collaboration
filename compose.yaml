@@ -211,6 +211,24 @@ services:
       - lab
     profiles:
       - test
+  a2a-benchmark:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.a2a-sdk
+    command: ["python", "-m", "scripts.a2a_benchmark"]
+    environment:
+      BENCH_MODE: "${BENCH_MODE:-baseline}"
+      BENCH_REPEATS: "${BENCH_REPEATS:-100}"
+      BENCH_WARMUPS: "${BENCH_WARMUPS:-10}"
+      BENCH_RUN_ID: "${BENCH_RUN_ID:-manual}"
+      BENCH_OUTPUT: /results
+    volumes:
+      - agent-identities:/identities:ro
+      - ./benchmark-results:/results
+    networks:
+      - lab
+    profiles:
+      - benchmark
   verifier:
     build:
       context: .
