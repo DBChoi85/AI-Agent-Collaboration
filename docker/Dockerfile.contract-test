@@ -5,4 +5,5 @@ RUN npm install --ignore-scripts --no-audit --no-fund --package-lock=false
 COPY contracts/ ./contracts/
 COPY docker/contract-test/run.mjs ./run.mjs
 COPY docker/contract-test/integrated.mjs ./integrated.mjs
+COPY docker/contract-test/official-a2a-besu.mjs ./official-a2a-besu.mjs
 CMD ["node", "run.mjs"]
