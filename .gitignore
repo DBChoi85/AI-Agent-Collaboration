@@ -1,2 +1,5 @@
 # Disposable Besu QBFT genesis, validator key, and test state
 local-besu-lab/
+
+# Host-retained benchmark output (may contain experimental metadata)
+benchmark-results/
