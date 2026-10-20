@@ -93,7 +93,7 @@ assert.equal(await registry.members(id, bob), true);
 await mustRevert(() => registry.join.staticCall(id, bob), 'duplicate member');
 await mustRevert(() => registry.anchor.staticCall(id, ethers.id('unknown'), digest), 'nonmember evidence');
 await sent(await registry.anchor(id, bob, digest, fee));
-await sent(await registry.leave(id, bob, fee));
+await sent(await registry.leaveCollaboration(id, bob, fee));
 assert.equal(await registry.members(id, bob), false);
 await mustRevert(() => registry.anchor.staticCall(id, bob, digest), 'removed member evidence');
 await mustRevert(() => registry.connect(stranger).close.staticCall(id), 'non-owner close');
