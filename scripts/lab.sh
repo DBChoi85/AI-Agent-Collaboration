@@ -29,6 +29,10 @@ case "${1:-}" in
     done
     docker compose run --rm --build --no-deps authenticated-a2a-test
     ;;
+  official-a2a-besu-test)
+    sh scripts/lab.sh authenticated-a2a-test
+    docker compose run --rm --build --no-deps official-a2a-besu-test
+    ;;
   trust-test)
     docker compose run --rm --no-deps --build trust-test
     ;;
@@ -40,7 +44,7 @@ case "${1:-}" in
     docker compose run --rm --build contract-test
     ;;
   stop)
-    docker compose down --volumes --remove-orphans
+    docker compose --profile auth --profile test down --volumes --remove-orphans
     rm -rf local-besu-lab
     ;;
   reset)
@@ -50,7 +54,7 @@ case "${1:-}" in
     docker compose up -d --force-recreate besu
     ;;
   *)
-    echo "Usage: sh scripts/lab.sh {start|test|contract-test|a2a-test|integrated-test|official-a2a-test|authenticated-a2a-test|trust-test|stop|reset}" >&2
+    echo "Usage: sh scripts/lab.sh {start|test|contract-test|a2a-test|integrated-test|official-a2a-test|authenticated-a2a-test|official-a2a-besu-test|trust-test|stop|reset}" >&2
     exit 2
     ;;
 esac
