@@ -43,13 +43,13 @@ assert.ok(artifact.evm.bytecode.object.length > 0, 'compiled bytecode missing');
 const latest = await provider.getBlock('latest');
 assert.equal(latest.baseFeePerGas ?? 0n, 0n,
   'This zero-balance dev signer requires zero baseFeePerGas; configure an isolated zero-fee Besu chain');
-const owner = ethers.Wallet.createRandom().connect(provider);
-const stranger = ethers.Wallet.createRandom().connect(provider);
+const owner = new ethers.NonceManager(ethers.Wallet.createRandom().connect(provider));
+const stranger = new ethers.NonceManager(ethers.Wallet.createRandom().connect(provider));
 const fee = { type: 0, gasPrice: 0n };
 console.log('Using ephemeral local signers (no eth_accounts or external keys)');
 const factory = new ethers.ContractFactory(artifact.abi, '0x' + artifact.evm.bytecode.object, owner);
 const deploymentRequest = await factory.getDeployTransaction(fee);
-const estimatedGas = await provider.estimateGas({ ...deploymentRequest, from: owner.address });
+const estimatedGas = await provider.estimateGas({ ...deploymentRequest, from: await owner.getAddress() });
 const deploymentGasLimit = estimatedGas * 120n / 100n + 100_000n;
 console.log('Deployment gas estimate:', estimatedGas.toString(), 'limit:', deploymentGasLimit.toString());
 const registry = await factory.deploy({ ...fee, gasLimit: deploymentGasLimit });
@@ -105,3 +105,51 @@ assert.equal(state.sequence, 5n);
 assert.notEqual(state.head, zero);
 console.log('PASS: compiled, deployed, state transitions, membership, access rejection, evidence, close');
 console.log(JSON.stringify({ contract: await registry.getAddress(), sequence: state.sequence.toString(), head: state.head }, null, 2));
+
+
+// Experimental track: two independently named agent domains exchange an off-chain
+// task artifact and anchor only its SHA-256 digest on the zero-fee QBFT ledger.
+// This is NOT yet an A2A transport or production DPKI integration benchmark.
+const experimentId = ethers.id('cross-domain-artifact-experiment');
+const producer = ethers.id('domainA/producer');
+const consumer = ethers.id('domainB/consumer');
+const artifactPayload = Buffer.from(JSON.stringify({
+  taskId: 'task-001', producer: 'domainA/producer',
+  consumer: 'domainB/consumer', result: { score: 0.98, accepted: true }
+}));
+const artifactDigest = ethers.sha256(artifactPayload);
+const timings = {};
+async function measure(label, action) {
+  const start = process.hrtime.bigint();
+  const result = await action();
+  timings[label] = Number(process.hrtime.bigint() - start) / 1e6;
+  return result;
+}
+await measure('createMs', async () => sent(await registry.create(experimentId, producer, fee)));
+await measure('joinMs', async () => sent(await registry.join(experimentId, consumer, fee)));
+const anchored = await measure('anchorMs', async () =>
+  sent(await registry.anchor(experimentId, producer, artifactDigest, fee)));
+const event = anchored.logs.map(log => {
+  try { return registry.interface.parseLog(log); } catch { return null; }
+}).find(log => log?.name === 'EvidenceAnchored');
+assert.ok(event, 'EvidenceAnchored event missing');
+assert.equal(event.args.identity, producer);
+assert.equal(event.args.digest, artifactDigest);
+assert.equal(ethers.sha256(artifactPayload), event.args.digest, 'unaltered artifact must verify');
+const tampered = Buffer.from(artifactPayload);
+tampered[0] ^= 1;
+assert.notEqual(ethers.sha256(tampered), event.args.digest, 'tampered artifact must be detected');
+const experimentState = await registry.collaborations(experimentId);
+assert.equal(experimentState.sequence, 3n);
+await measure('closeMs', async () => sent(await registry.close(experimentId, fee)));
+console.log('PASS: cross-domain artifact digest anchoring, event verification, and tamper detection');
+console.log('EXPERIMENT_RESULT=' + JSON.stringify({
+  track: 'qbft-cross-domain-artifact-v1',
+  chainId: (await provider.getNetwork()).chainId.toString(),
+  contract: await registry.getAddress(),
+  collaborationId: experimentId,
+  producer: 'domainA/producer', consumer: 'domainB/consumer',
+  artifactBytes: artifactPayload.length, artifactDigest,
+  tamperDetected: true, eventVerified: true, timingsMs: timings,
+  caveat: 'single-run functional experiment; not A2A transport or DPKI validation'
+}));
