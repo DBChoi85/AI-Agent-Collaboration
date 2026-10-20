@@ -1,6 +1,9 @@
 """Official SDK authenticated task acceptance and rejection, in both directions."""
 import asyncio
 import json
+import os
+from pathlib import Path
+from hashlib import sha256
 import time
 import httpx
 from a2a.client import A2ACardResolver, ClientConfig, create_client
@@ -34,6 +37,7 @@ async def send(client, envelope):
 
 async def main():
     records = []
+    evidence = []
     async with httpx.AsyncClient(timeout=15) as http:
         for source, url in CASES:
             card = await A2ACardResolver(httpx_client=http, base_url=url).get_agent_card()
@@ -43,6 +47,12 @@ async def main():
                 status, artifacts, valid_events = await send(client, signed)
                 print("AUTH_CASE=" + json.dumps({"source": source, "case": "valid", "status": int(status) if status is not None else None, "artifacts": len(artifacts), "events": valid_events}), flush=True)
                 assert status == TaskState.TASK_STATE_COMPLETED and artifacts, (status, artifacts)
+                texts = [part.text for artifact in artifacts for part in artifact.parts if part.text]
+                assert texts, "authenticated task must return a text artifact"
+                artifact_bytes = texts[0].encode("utf-8")
+                evidence.append({"source": source, "receiver": card.name,
+                    "artifactSha256": "0x" + sha256(artifact_bytes).hexdigest(),
+                    "artifactBytes": len(artifact_bytes)})
                 altered = json.loads(json.dumps(signed))
                 altered["body"]["payload"]["value"] = 43
                 tampered_status, tampered_artifacts, tampered_events = await send(client, altered)
@@ -61,6 +71,12 @@ async def main():
                     "staleRejected": True, "unsignedRejected": True})
             finally:
                 await client.close()
+    if os.environ.get("EVIDENCE_OUTPUT"):
+        path = Path(os.environ["EVIDENCE_OUTPUT"])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"track": "official-a2a-x509-evidence-v1",
+            "records": evidence}, sort_keys=True), encoding="utf-8")
+        print("EVIDENCE_FILE=" + str(path), flush=True)
     print("PASS: authenticated official A2A SDK tasks accepted; unsigned/tampered/stale rejected")
     print("AUTHENTICATED_A2A_RESULT=" + json.dumps({"track": "a2a-x509-signed-envelope", "records": records,
         "caveat": "application-layer signature only; no replay cache, on-chain DPKI, or Besu anchoring"}))
