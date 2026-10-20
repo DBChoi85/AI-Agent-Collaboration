@@ -5,6 +5,7 @@ import { ethers } from 'ethers';
 
 const rpc = process.env.BESU_RPC_URL || 'http://besu:8545';
 const maxAttempts = 45;
+const transactionTimeoutMs = 90_000;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const provider = new ethers.JsonRpcProvider(rpc, undefined, { staticNetwork: false });
 let ready = false;
@@ -47,7 +48,11 @@ const fee = { type: 0, gasPrice: 0n };
 console.log('Using ephemeral local signers (no eth_accounts or external keys)');
 const factory = new ethers.ContractFactory(artifact.abi, '0x' + artifact.evm.bytecode.object, owner);
 const registry = await factory.deploy({ ...fee, gasLimit: 5_000_000n });
-await registry.waitForDeployment();
+const deployment = registry.deploymentTransaction();
+assert.ok(deployment, 'deployment transaction missing');
+const deploymentReceipt = await deployment.wait(1, transactionTimeoutMs);
+assert.ok(deploymentReceipt, 'deployment was not mined within 90 seconds; check Besu miner logs and transaction pool');
+assert.equal(deploymentReceipt.status, 1, 'contract deployment reverted');
 console.log('Deployed:', await registry.getAddress());
 
 const id = ethers.id('collaboration-e2e-1');
@@ -57,36 +62,38 @@ const digest = ethers.sha256(ethers.toUtf8Bytes('off-chain-artifact'));
 const zero = ethers.ZeroHash;
 
 async function sent(tx) {
-  const receipt = await tx.wait();
+  const receipt = await tx.wait(1, transactionTimeoutMs);
+  assert.ok(receipt, 'transaction was not mined within 90 seconds');
   assert.equal(receipt.status, 1);
   return receipt;
 }
 async function mustRevert(action, label) {
-  let rejected = false;
+  let reverted = false;
   try {
-    const tx = await action();
-    await tx.wait();
+    await action();
   } catch (error) {
-    rejected = true;
+    // Reject only contract execution reverts, never RPC, nonce, or balance errors.
+    if (error.code !== 'CALL_EXCEPTION') throw error;
+    reverted = true;
   }
-  assert.ok(rejected, 'expected revert: ' + label);
+  assert.ok(reverted, 'expected EVM revert: ' + label);
 }
-await mustRevert(() => registry.create(zero, alice, fee), 'zero collaboration id');
+await mustRevert(() => registry.create.staticCall(zero, alice), 'zero collaboration id');
 await sent(await registry.create(id, alice, fee));
 assert.equal(await registry.members(id, alice), true);
-await mustRevert(() => registry.create(id, alice, fee), 'duplicate collaboration');
-await mustRevert(() => registry.connect(stranger).join(id, bob, fee), 'non-owner join');
+await mustRevert(() => registry.create.staticCall(id, alice), 'duplicate collaboration');
+await mustRevert(() => registry.connect(stranger).join.staticCall(id, bob), 'non-owner join');
 await sent(await registry.join(id, bob, fee));
 assert.equal(await registry.members(id, bob), true);
-await mustRevert(() => registry.join(id, bob, fee), 'duplicate member');
-await mustRevert(() => registry.anchor(id, ethers.id('unknown'), digest, fee), 'nonmember evidence');
+await mustRevert(() => registry.join.staticCall(id, bob), 'duplicate member');
+await mustRevert(() => registry.anchor.staticCall(id, ethers.id('unknown'), digest), 'nonmember evidence');
 await sent(await registry.anchor(id, bob, digest, fee));
 await sent(await registry.leave(id, bob, fee));
 assert.equal(await registry.members(id, bob), false);
-await mustRevert(() => registry.anchor(id, bob, digest, fee), 'removed member evidence');
-await mustRevert(() => registry.connect(stranger).close(id, fee), 'non-owner close');
+await mustRevert(() => registry.anchor.staticCall(id, bob, digest), 'removed member evidence');
+await mustRevert(() => registry.connect(stranger).close.staticCall(id), 'non-owner close');
 await sent(await registry.close(id, fee));
-await mustRevert(() => registry.join(id, bob, fee), 'closed collaboration');
+await mustRevert(() => registry.join.staticCall(id, bob), 'closed collaboration');
 const state = await registry.collaborations(id);
 assert.equal(state.state, 2n);
 assert.equal(state.sequence, 5n);
