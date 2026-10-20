@@ -98,8 +98,10 @@ services:
       AGENT_NAME: producer
       AGENT_PUBLIC_URL: http://auth-agent-a:8080
       A2A_REQUIRE_AUTH: "1"
+      A2A_REQUIRE_DLT_STATUS: "${A2A_REQUIRE_DLT_STATUS:-0}"
     volumes:
       - agent-identities:/identities:ro
+      - certificate-chain:/chain:ro
     networks:
       - lab
     profiles:
@@ -113,8 +115,10 @@ services:
       AGENT_NAME: consumer
       AGENT_PUBLIC_URL: http://auth-agent-b:8080
       A2A_REQUIRE_AUTH: "1"
+      A2A_REQUIRE_DLT_STATUS: "${A2A_REQUIRE_DLT_STATUS:-0}"
     volumes:
       - agent-identities:/identities:ro
+      - certificate-chain:/chain:ro
     networks:
       - lab
     profiles:
