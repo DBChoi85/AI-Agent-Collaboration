@@ -38,9 +38,10 @@ assert.ok(artifact.evm.bytecode.object.length > 0, 'compiled bytecode missing');
 
 // Besu --network=dev includes prefunded development accounts. No real keys are committed.
 const accounts = await provider.send('eth_accounts', []);
-assert.ok(accounts.length >= 2, 'Besu dev node must expose two unlocked accounts');
+assert.ok(accounts.length >= 1, 'Besu dev node must expose an unlocked account');
 const owner = await provider.getSigner(accounts[0]);
-const stranger = await provider.getSigner(accounts[1]);
+const stranger = ethers.Wallet.createRandom().connect(provider);
+await (await owner.sendTransaction({ to: stranger.address, value: ethers.parseEther('1') })).wait();
 const factory = new ethers.ContractFactory(artifact.abi, '0x' + artifact.evm.bytecode.object, owner);
 const registry = await factory.deploy();
 await registry.waitForDeployment();
