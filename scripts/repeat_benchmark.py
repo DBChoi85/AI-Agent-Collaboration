@@ -67,6 +67,7 @@ def main():
             rng.shuffle(order)
             print(f"REPLICATION {number}/{args.runs} ORDER={order}", flush=True)
             # Every replication uses newly generated Besu chain and X.509 identities.
+            command(["sh", "scripts/lab.sh", "stop"])
             command(["sh", "scripts/lab.sh", "reset"])
             compose("up", "-d", "--build", "--wait", "sdk-agent-a", "sdk-agent-b")
             compose("run", "--rm", "--no-deps", "--build", "identity-init")
