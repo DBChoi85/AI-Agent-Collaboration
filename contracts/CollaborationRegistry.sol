@@ -59,7 +59,7 @@ contract CollaborationRegistry {
         emit MemberJoined(id, identity, seq, head);
     }
 
-    function leave(bytes32 id, bytes32 identity) external onlyOwner(id) {
+    function leaveCollaboration(bytes32 id, bytes32 identity) external onlyOwner(id) {
         if (collaborations[id].state != State.Active) revert InvalidState();
         if (!members[id][identity]) revert NotMember();
         members[id][identity] = false;

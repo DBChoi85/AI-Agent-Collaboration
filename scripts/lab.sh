@@ -9,6 +9,10 @@ case "${1:-}" in
   test)
     docker compose run --rm --build verifier
     ;;
+  a2a-test)
+    docker compose up -d --build agent-a agent-b
+    docker compose run --rm --build a2a-test
+    ;;
   contract-test)
     docker compose run --rm --build contract-test
     ;;
@@ -23,7 +27,7 @@ case "${1:-}" in
     docker compose up -d --force-recreate besu
     ;;
   *)
-    echo "Usage: sh scripts/lab.sh {start|test|contract-test|stop|reset}" >&2
+    echo "Usage: sh scripts/lab.sh {start|test|contract-test|a2a-test|stop|reset}" >&2
     exit 2
     ;;
 esac

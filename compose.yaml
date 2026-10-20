@@ -20,6 +20,38 @@ services:
       - besu-data:/var/lib/besu
     networks:
       - lab
+  agent-a:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+    environment:
+      AGENT_DOMAIN: domainA
+      AGENT_NAME: producer
+      AGENT_PUBLIC_URL: http://agent-a:8080
+    networks:
+      - lab
+  agent-b:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+    environment:
+      AGENT_DOMAIN: domainB
+      AGENT_NAME: consumer
+      AGENT_PUBLIC_URL: http://agent-b:8080
+    networks:
+      - lab
+  a2a-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.agent
+    depends_on:
+      - agent-a
+      - agent-b
+    command: ["python", "-m", "scripts.a2a_exchange_test"]
+    networks:
+      - lab
+    profiles:
+      - test
   verifier:
     build:
       context: .
