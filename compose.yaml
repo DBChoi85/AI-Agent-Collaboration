@@ -31,6 +31,18 @@ services:
     profiles:
       - test
     command: ["python", "-m", "scripts.docker_smoke"]
+  contract-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.contract-test
+    environment:
+      BESU_RPC_URL: http://besu:8545
+    depends_on:
+      - besu
+    networks:
+      - lab
+    profiles:
+      - test
 volumes:
   besu-data:
 networks:

@@ -1,0 +1,8 @@
+{
+  "name": "collaboration-contract-test",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"test": "node run.mjs"},
+  "dependencies": {"ethers": "6.15.0", "solc": "0.8.30"}
+}
