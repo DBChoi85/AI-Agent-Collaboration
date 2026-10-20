@@ -95,8 +95,10 @@ services:
       dockerfile: docker/Dockerfile.a2a-sdk
     command: ["python", "-m", "scripts.official_a2a_test"]
     depends_on:
-      - sdk-agent-a
-      - sdk-agent-b
+      sdk-agent-a:
+        condition: service_healthy
+      sdk-agent-b:
+        condition: service_healthy
     networks:
       - lab
     profiles:
