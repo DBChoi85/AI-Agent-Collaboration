@@ -52,6 +52,23 @@ services:
       - lab
     profiles:
       - test
+  integrated-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.contract-test
+    environment:
+      BESU_RPC_URL: http://besu:8545
+      AGENT_A_URL: http://agent-a:8080
+      AGENT_B_URL: http://agent-b:8080
+    depends_on:
+      - besu
+      - agent-a
+      - agent-b
+    command: ["node", "integrated.mjs"]
+    networks:
+      - lab
+    profiles:
+      - test
   verifier:
     build:
       context: .
