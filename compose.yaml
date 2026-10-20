@@ -103,6 +103,14 @@ services:
       - lab
     profiles:
       - test
+  trust-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.trust-test
+    networks:
+      - lab
+    profiles:
+      - test
   verifier:
     build:
       context: .

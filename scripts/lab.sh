@@ -15,7 +15,10 @@ case "${1:-}" in
     ;;
   official-a2a-test)
     docker compose up -d --build --wait sdk-agent-a sdk-agent-b
-    docker compose run --rm --build official-a2a-test
+    docker compose run --rm --no-deps --build official-a2a-test
+    ;;
+  trust-test)
+    docker compose run --rm --no-deps --build trust-test
     ;;
   integrated-test)
     docker compose up -d --build besu agent-a agent-b
@@ -35,7 +38,7 @@ case "${1:-}" in
     docker compose up -d --force-recreate besu
     ;;
   *)
-    echo "Usage: sh scripts/lab.sh {start|test|contract-test|a2a-test|integrated-test|official-a2a-test|stop|reset}" >&2
+    echo "Usage: sh scripts/lab.sh {start|test|contract-test|a2a-test|integrated-test|official-a2a-test|trust-test|stop|reset}" >&2
     exit 2
     ;;
 esac
