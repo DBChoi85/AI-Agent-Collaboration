@@ -16,17 +16,21 @@ CASES = [
 async def send(client, envelope):
     request = SendMessageRequest(message=new_text_message(
         json.dumps(envelope, sort_keys=True), role=Role.ROLE_USER))
-    status, artifacts = None, []
+    status, artifacts, events = None, [], []
     async for response in client.send_message(request):
         kind = response.WhichOneof("payload")
+        events.append({"kind": kind})
         if kind == "task":
             status = response.task.status.state
+            events[-1]['status'] = int(status)
             artifacts.extend(response.task.artifacts)
         elif kind == "status_update":
             status = response.status_update.status.state
+            events[-1]['status'] = int(status)
         elif kind == "artifact_update":
             artifacts.append(response.artifact_update.artifact)
-    return status, artifacts
+        events[-1]['artifacts'] = len(artifacts)
+    return status, artifacts, events
 
 async def main():
     records = []
@@ -36,17 +40,21 @@ async def main():
             client = await create_client(agent=card, client_config=ClientConfig(streaming=False))
             try:
                 signed = sign_envelope(source, {"operation": "exchange", "value": 42})
-                status, artifacts = await send(client, signed)
+                status, artifacts, valid_events = await send(client, signed)
+                print("AUTH_CASE=" + json.dumps({"source": source, "case": "valid", "status": int(status) if status is not None else None, "artifacts": len(artifacts), "events": valid_events}), flush=True)
                 assert status == TaskState.TASK_STATE_COMPLETED and artifacts, (status, artifacts)
                 altered = json.loads(json.dumps(signed))
                 altered["body"]["payload"]["value"] = 43
-                tampered_status, tampered_artifacts = await send(client, altered)
+                tampered_status, tampered_artifacts, tampered_events = await send(client, altered)
+                print("AUTH_CASE=" + json.dumps({"source": source, "case": "tampered", "status": int(tampered_status) if tampered_status is not None else None, "artifacts": len(tampered_artifacts), "events": tampered_events}), flush=True)
                 assert tampered_status == TaskState.TASK_STATE_FAILED and not tampered_artifacts
                 stale = sign_envelope(source, {"operation": "exchange"})
                 stale["body"]["issuedAt"] = int(time.time()) - 300
-                stale_status, stale_artifacts = await send(client, stale)
+                stale_status, stale_artifacts, stale_events = await send(client, stale)
+                print("AUTH_CASE=" + json.dumps({"source": source, "case": "stale", "status": int(stale_status) if stale_status is not None else None, "artifacts": len(stale_artifacts), "events": stale_events}), flush=True)
                 assert stale_status == TaskState.TASK_STATE_FAILED and not stale_artifacts
-                unsigned_status, unsigned_artifacts = await send(client, {"payload": "unsigned"})
+                unsigned_status, unsigned_artifacts, unsigned_events = await send(client, {"payload": "unsigned"})
+                print("AUTH_CASE=" + json.dumps({"source": source, "case": "unsigned", "status": int(unsigned_status) if unsigned_status is not None else None, "artifacts": len(unsigned_artifacts), "events": unsigned_events}), flush=True)
                 assert unsigned_status == TaskState.TASK_STATE_FAILED and not unsigned_artifacts
                 records.append({"source": source, "receiver": card.name,
                     "validAccepted": True, "tamperedRejected": True,
