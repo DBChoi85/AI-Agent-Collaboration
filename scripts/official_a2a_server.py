@@ -5,6 +5,7 @@ import os
 
 import uvicorn
 from collaboration.a2a_auth import verify_envelope
+from collaboration.dpki_status import require_onchain_active
 from collaboration.trust import TrustRejected
 from a2a.helpers import get_message_text, new_task_from_user_message, new_text_message, new_text_part
 from a2a.server.agent_execution import AgentExecutor, RequestContext
@@ -33,7 +34,10 @@ class ExchangeExecutor(AgentExecutor):
         source_text = get_message_text(context.message)
         if os.environ.get("A2A_REQUIRE_AUTH") == "1":
             try:
-                authenticated_source, payload = verify_envelope(json.loads(source_text))
+                envelope = json.loads(source_text)
+                authenticated_source, payload = verify_envelope(envelope)
+                if os.environ.get("A2A_REQUIRE_DLT_STATUS") == "1":
+                    require_onchain_active(envelope["certificate"].encode())
                 source_text = json.dumps({"authenticatedSource": authenticated_source,
                                           "payload": payload}, sort_keys=True)
             except (TrustRejected, ValueError, TypeError) as exc:
