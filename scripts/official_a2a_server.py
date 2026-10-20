@@ -1,5 +1,6 @@
 """Official A2A Python SDK 1.0 JSON-RPC server for disposable Docker experiments."""
 import json
+import logging
 import os
 
 import uvicorn
@@ -17,6 +18,7 @@ from starlette.applications import Starlette
 
 DOMAIN = os.environ.get("AGENT_DOMAIN", "unknown")
 NAME = os.environ.get("AGENT_NAME", "agent")
+LOG = logging.getLogger('a2a.auth')
 PUBLIC_URL = os.environ.get("AGENT_PUBLIC_URL", "http://localhost:8080")
 
 
@@ -34,10 +36,12 @@ class ExchangeExecutor(AgentExecutor):
                 authenticated_source, payload = verify_envelope(json.loads(source_text))
                 source_text = json.dumps({"authenticatedSource": authenticated_source,
                                           "payload": payload}, sort_keys=True)
-            except (TrustRejected, ValueError, TypeError):
+            except (TrustRejected, ValueError, TypeError) as exc:
+                LOG.warning('A2A_AUTH_REJECT receiver=%s/%s reason=%s', DOMAIN, NAME, type(exc).__name__)
                 await updater.update_status(TaskState.TASK_STATE_FAILED,
                                             message=new_text_message("Authentication rejected"))
                 return
+            LOG.info("A2A_AUTH_ACCEPT receiver=%s/%s sender=%s", DOMAIN, NAME, authenticated_source)
         # The exact artifact returned by the SDK is canonical UTF-8 JSON text.
         result = {"receiver": f"{DOMAIN}/{NAME}", "sourceText": source_text, "accepted": True}
         artifact_text = json.dumps(result, sort_keys=True, separators=(",", ":"))
