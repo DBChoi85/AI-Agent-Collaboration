@@ -159,8 +159,25 @@ services:
       context: .
       dockerfile: docker/Dockerfile.a2a-sdk
     command: ["python", "-m", "scripts.authenticated_a2a_test"]
+    environment:
+      EVIDENCE_OUTPUT: /evidence/authenticated-a2a.json
     volumes:
+      - a2a-evidence:/evidence
       - agent-identities:/identities:ro
+    networks:
+      - lab
+    profiles:
+      - test
+  official-a2a-besu-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.contract-test
+    command: ["node", "official-a2a-besu.mjs"]
+    environment:
+      BESU_RPC_URL: http://besu:8545
+      EVIDENCE_INPUT: /evidence/authenticated-a2a.json
+    volumes:
+      - a2a-evidence:/evidence:ro
     networks:
       - lab
     profiles:
@@ -193,6 +210,7 @@ services:
 volumes:
   besu-data:
   agent-identities:
+  a2a-evidence:
 networks:
   lab:
     internal: false
