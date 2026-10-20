@@ -14,7 +14,7 @@ case "${1:-}" in
     docker compose run --rm --build a2a-test
     ;;
   official-a2a-test)
-    docker compose up -d --build sdk-agent-a sdk-agent-b
+    docker compose up -d --build --wait sdk-agent-a sdk-agent-b
     docker compose run --rm --build official-a2a-test
     ;;
   integrated-test)
