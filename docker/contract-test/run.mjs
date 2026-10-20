@@ -29,6 +29,7 @@ const input = {
   sources: { 'CollaborationRegistry.sol': { content: source } },
   settings: { optimizer: { enabled: true, runs: 200 }, outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object'] } } }
 };
+console.log('Solidity compiler:', solc.version());
 const output = JSON.parse(solc.compile(JSON.stringify(input)));
 for (const issue of output.errors || []) {
   if (issue.severity === 'error') throw new Error(issue.formattedMessage);
@@ -47,7 +48,11 @@ const stranger = ethers.Wallet.createRandom().connect(provider);
 const fee = { type: 0, gasPrice: 0n };
 console.log('Using ephemeral local signers (no eth_accounts or external keys)');
 const factory = new ethers.ContractFactory(artifact.abi, '0x' + artifact.evm.bytecode.object, owner);
-const registry = await factory.deploy({ ...fee, gasLimit: 5_000_000n });
+const deploymentRequest = await factory.getDeployTransaction(fee);
+const estimatedGas = await provider.estimateGas({ ...deploymentRequest, from: owner.address });
+const deploymentGasLimit = estimatedGas * 120n / 100n + 100_000n;
+console.log('Deployment gas estimate:', estimatedGas.toString(), 'limit:', deploymentGasLimit.toString());
+const registry = await factory.deploy({ ...fee, gasLimit: deploymentGasLimit });
 const deployment = registry.deploymentTransaction();
 assert.ok(deployment, 'deployment transaction missing');
 const deploymentReceipt = await deployment.wait(1, transactionTimeoutMs);
