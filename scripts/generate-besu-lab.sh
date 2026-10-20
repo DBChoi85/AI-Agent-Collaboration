@@ -38,7 +38,7 @@ cat > local-besu-lab/config.json <<'EOF'
   }
 }
 EOF
-docker run --rm -v "$(pwd)/local-besu-lab:/lab" --entrypoint /opt/besu/bin/besu hyperledger/besu:25.9.0 operator generate-blockchain-config --config-file=/lab/config.json --to=/lab/generated --private-key-file-name=key
+docker run --rm --user "$(id -u):$(id -g)" -v "$(pwd)/local-besu-lab:/lab" --entrypoint /opt/besu/bin/besu hyperledger/besu:25.9.0 operator generate-blockchain-config --config-file=/lab/config.json --to=/lab/generated --private-key-file-name=key
 cp local-besu-lab/generated/genesis.json local-besu-lab/genesis.json
 key_file=$(find local-besu-lab/generated/keys -type f -name key | head -n 1)
 [ -n "$key_file" ] || { echo "QBFT validator key was not generated" >&2; exit 1; }
