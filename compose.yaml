@@ -3,7 +3,8 @@ services:
   besu:
     image: hyperledger/besu:25.9.0
     command:
-      - --network=dev
+      - --genesis-file=/lab/genesis.json
+      - --node-private-key-file=/lab/key
       - --rpc-http-enabled=true
       - --rpc-http-host=0.0.0.0
       - --rpc-http-port=8545
@@ -11,12 +12,11 @@ services:
       - --host-allowlist=*
       - --rpc-http-cors-origins=*
       - --data-path=/var/lib/besu
-      - --miner-enabled=true
-      - --miner-coinbase=0x0000000000000000000000000000000000000001
       - --min-gas-price=0
     ports:
       - "127.0.0.1:8545:8545"
     volumes:
+      - ./local-besu-lab:/lab:ro
       - besu-data:/var/lib/besu
     networks:
       - lab

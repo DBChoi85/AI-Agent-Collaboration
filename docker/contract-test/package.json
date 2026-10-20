@@ -4,5 +4,5 @@
   "private": true,
   "type": "module",
   "scripts": {"test": "node run.mjs"},
-  "dependencies": {"ethers": "6.15.0", "solc": "0.8.30"}
+  "dependencies": {"ethers": "6.15.0", "solc": "^0.8.30"}
 }
