@@ -6,4 +6,5 @@ COPY contracts/ ./contracts/
 COPY docker/contract-test/run.mjs ./run.mjs
 COPY docker/contract-test/integrated.mjs ./integrated.mjs
 COPY docker/contract-test/official-a2a-besu.mjs ./official-a2a-besu.mjs
+COPY docker/contract-test/certificate-status.mjs ./certificate-status.mjs
 CMD ["node", "run.mjs"]
