@@ -27,7 +27,7 @@ const source = fs.readFileSync('contracts/CollaborationRegistry.sol', 'utf8');
 const input = {
   language: 'Solidity',
   sources: { 'CollaborationRegistry.sol': { content: source } },
-  settings: { optimizer: { enabled: true, runs: 200 }, outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object'] } } }
+  settings: { optimizer: { enabled: true, runs: 200 }, evmVersion: 'cancun', outputSelection: { '*': { '*': ['abi', 'evm.bytecode.object'] } } }
 };
 console.log('Solidity compiler:', solc.version());
 const output = JSON.parse(solc.compile(JSON.stringify(input)));
