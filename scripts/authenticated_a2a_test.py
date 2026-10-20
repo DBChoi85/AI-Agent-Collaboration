@@ -9,8 +9,8 @@ from a2a.types.a2a_pb2 import Role, SendMessageRequest, TaskState
 from collaboration.a2a_auth import sign_envelope
 
 CASES = [
-    ("domainA/producer", "http://sdk-agent-b:8080"),
-    ("domainB/consumer", "http://sdk-agent-a:8080"),
+    ("domainA/producer", "http://auth-agent-b:8080"),
+    ("domainB/consumer", "http://auth-agent-a:8080"),
 ]
 
 async def send(client, envelope):

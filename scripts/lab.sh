@@ -19,7 +19,14 @@ case "${1:-}" in
     ;;
   authenticated-a2a-test)
     docker compose run --rm --build --no-deps identity-init
-    A2A_REQUIRE_AUTH=1 docker compose up -d --build --force-recreate --wait sdk-agent-a sdk-agent-b
+    docker compose --profile auth up -d --build --force-recreate --wait auth-agent-a auth-agent-b
+    for service in auth-agent-a auth-agent-b; do
+      actual="$(docker compose exec -T "$service" printenv A2A_REQUIRE_AUTH)"
+      if [ "$actual" != "1" ]; then
+        echo "FAIL CLOSED: $service A2A_REQUIRE_AUTH must be 1, got '$actual'" >&2
+        exit 1
+      fi
+    done
     docker compose run --rm --build --no-deps authenticated-a2a-test
     ;;
   trust-test)

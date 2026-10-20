@@ -89,6 +89,36 @@ services:
       AGENT_PUBLIC_URL: http://sdk-agent-b:8080
     networks:
       - lab
+  auth-agent-a:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.a2a-sdk
+    environment:
+      AGENT_DOMAIN: domainA
+      AGENT_NAME: producer
+      AGENT_PUBLIC_URL: http://auth-agent-a:8080
+      A2A_REQUIRE_AUTH: "1"
+    volumes:
+      - agent-identities:/identities:ro
+    networks:
+      - lab
+    profiles:
+      - auth
+  auth-agent-b:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.a2a-sdk
+    environment:
+      AGENT_DOMAIN: domainB
+      AGENT_NAME: consumer
+      AGENT_PUBLIC_URL: http://auth-agent-b:8080
+      A2A_REQUIRE_AUTH: "1"
+    volumes:
+      - agent-identities:/identities:ro
+    networks:
+      - lab
+    profiles:
+      - auth
   official-a2a-test:
     build:
       context: .
