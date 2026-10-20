@@ -1,0 +1,7 @@
+FROM python:3.12-slim
+WORKDIR /app
+COPY collaboration/ ./collaboration/
+COPY scripts/ ./scripts/
+COPY tests/ ./tests/
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+CMD ["python", "-m", "scripts.docker_smoke"]
