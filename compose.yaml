@@ -111,6 +111,30 @@ services:
       - lab
     profiles:
       - test
+  identity-init:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.a2a-sdk
+    command: ["python", "-m", "scripts.a2a_identity_bootstrap"]
+    environment:
+      IDENTITY_DIR: /identities
+    volumes:
+      - agent-identities:/identities
+    networks:
+      - lab
+    profiles:
+      - test
+  authenticated-a2a-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.a2a-sdk
+    command: ["python", "-m", "scripts.authenticated_a2a_test"]
+    volumes:
+      - agent-identities:/identities:ro
+    networks:
+      - lab
+    profiles:
+      - test
   verifier:
     build:
       context: .
@@ -138,6 +162,7 @@ services:
       - test
 volumes:
   besu-data:
+  agent-identities:
 networks:
   lab:
     internal: false
