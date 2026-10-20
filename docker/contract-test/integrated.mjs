@@ -76,7 +76,6 @@ for (const [sourceName, url, identity] of [
   const task = body.result;
   assert.equal(task.status.state, 'completed');
   const shared = task.artifacts[0];
-  const canonical = JSON.stringify(shared.parts[0].data, Object.keys(shared.parts[0].data).sort());
   // Python transport hashes sorted-key compact JSON; nested input requires recursive sorting.
   const stable = value => Array.isArray(value) ? '[' + value.map(stable).join(',') + ']' :
     value && typeof value === 'object' ? '{' + Object.keys(value).sort().map(k =>
