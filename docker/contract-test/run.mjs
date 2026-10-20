@@ -36,14 +36,17 @@ for (const issue of output.errors || []) {
 const artifact = output.contracts['CollaborationRegistry.sol'].CollaborationRegistry;
 assert.ok(artifact.evm.bytecode.object.length > 0, 'compiled bytecode missing');
 
-// Besu --network=dev includes prefunded development accounts. No real keys are committed.
-const accounts = await provider.send('eth_accounts', []);
-assert.ok(accounts.length >= 1, 'Besu dev node must expose an unlocked account');
-const owner = await provider.getSigner(accounts[0]);
+// Besu does not expose unlocked accounts by default. Sign locally with ephemeral
+// development-only keys. The isolated dev network must permit zero-fee txs.
+const latest = await provider.getBlock('latest');
+assert.equal(latest.baseFeePerGas ?? 0n, 0n,
+  'This zero-balance dev signer requires zero baseFeePerGas; configure an isolated zero-fee Besu chain');
+const owner = ethers.Wallet.createRandom().connect(provider);
 const stranger = ethers.Wallet.createRandom().connect(provider);
-await (await owner.sendTransaction({ to: stranger.address, value: ethers.parseEther('1') })).wait();
+const fee = { type: 0, gasPrice: 0n };
+console.log('Using ephemeral local signers (no eth_accounts or external keys)');
 const factory = new ethers.ContractFactory(artifact.abi, '0x' + artifact.evm.bytecode.object, owner);
-const registry = await factory.deploy();
+const registry = await factory.deploy({ ...fee, gasLimit: 5_000_000n });
 await registry.waitForDeployment();
 console.log('Deployed:', await registry.getAddress());
 
@@ -68,22 +71,22 @@ async function mustRevert(action, label) {
   }
   assert.ok(rejected, 'expected revert: ' + label);
 }
-await mustRevert(() => registry.create(zero, alice), 'zero collaboration id');
-await sent(await registry.create(id, alice));
+await mustRevert(() => registry.create(zero, alice, fee), 'zero collaboration id');
+await sent(await registry.create(id, alice, fee));
 assert.equal(await registry.members(id, alice), true);
-await mustRevert(() => registry.create(id, alice), 'duplicate collaboration');
-await mustRevert(() => registry.connect(stranger).join(id, bob), 'non-owner join');
-await sent(await registry.join(id, bob));
+await mustRevert(() => registry.create(id, alice, fee), 'duplicate collaboration');
+await mustRevert(() => registry.connect(stranger).join(id, bob, fee), 'non-owner join');
+await sent(await registry.join(id, bob, fee));
 assert.equal(await registry.members(id, bob), true);
-await mustRevert(() => registry.join(id, bob), 'duplicate member');
-await mustRevert(() => registry.anchor(id, ethers.id('unknown'), digest), 'nonmember evidence');
-await sent(await registry.anchor(id, bob, digest));
-await sent(await registry.leave(id, bob));
+await mustRevert(() => registry.join(id, bob, fee), 'duplicate member');
+await mustRevert(() => registry.anchor(id, ethers.id('unknown'), digest, fee), 'nonmember evidence');
+await sent(await registry.anchor(id, bob, digest, fee));
+await sent(await registry.leave(id, bob, fee));
 assert.equal(await registry.members(id, bob), false);
-await mustRevert(() => registry.anchor(id, bob, digest), 'removed member evidence');
-await mustRevert(() => registry.connect(stranger).close(id), 'non-owner close');
-await sent(await registry.close(id));
-await mustRevert(() => registry.join(id, bob), 'closed collaboration');
+await mustRevert(() => registry.anchor(id, bob, digest, fee), 'removed member evidence');
+await mustRevert(() => registry.connect(stranger).close(id, fee), 'non-owner close');
+await sent(await registry.close(id, fee));
+await mustRevert(() => registry.join(id, bob, fee), 'closed collaboration');
 const state = await registry.collaborations(id);
 assert.equal(state.state, 2n);
 assert.equal(state.sequence, 5n);
