@@ -3,6 +3,8 @@ import json
 import os
 
 import uvicorn
+from collaboration.a2a_auth import verify_envelope
+from collaboration.trust import TrustRejected
 from a2a.helpers import get_message_text, new_task_from_user_message, new_text_message, new_text_part
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
@@ -27,6 +29,15 @@ class ExchangeExecutor(AgentExecutor):
         updater = TaskUpdater(event_queue=event_queue, task_id=task.id, context_id=task.context_id)
         await updater.update_status(TaskState.TASK_STATE_WORKING, message=new_text_message("Working"))
         source_text = get_message_text(context.message)
+        if os.environ.get("A2A_REQUIRE_AUTH") == "1":
+            try:
+                authenticated_source, payload = verify_envelope(json.loads(source_text))
+                source_text = json.dumps({"authenticatedSource": authenticated_source,
+                                          "payload": payload}, sort_keys=True)
+            except (TrustRejected, ValueError, TypeError):
+                await updater.update_status(TaskState.TASK_STATE_FAILED,
+                                            message=new_text_message("Authentication rejected"))
+                return
         # The exact artifact returned by the SDK is canonical UTF-8 JSON text.
         result = {"receiver": f"{DOMAIN}/{NAME}", "sourceText": source_text, "accepted": True}
         artifact_text = json.dumps(result, sort_keys=True, separators=(",", ":"))
