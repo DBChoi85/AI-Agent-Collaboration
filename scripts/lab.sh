@@ -7,6 +7,9 @@ case "${1:-}" in
   test)
     docker compose run --rm --build verifier
     ;;
+  contract-test)
+    docker compose run --rm --build contract-test
+    ;;
   stop)
     docker compose down --volumes --remove-orphans
     ;;
@@ -15,7 +18,7 @@ case "${1:-}" in
     docker compose up -d besu
     ;;
   *)
-    echo "Usage: sh scripts/lab.sh {start|test|stop|reset}" >&2
+    echo "Usage: sh scripts/lab.sh {start|test|contract-test|stop|reset}" >&2
     exit 2
     ;;
 esac
