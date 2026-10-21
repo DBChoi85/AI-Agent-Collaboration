@@ -77,6 +77,9 @@ case "${1:-}" in
       > "benchmark-results/resources-$BENCH_RUN_ID.csv"
     echo "PASS: benchmark CSV/JSON saved under benchmark-results (retained after stop)"
     ;;
+  security-evaluation)
+    python3 scripts/security_evaluation.py --reset
+    ;;
   trust-test)
     docker compose run --rm --no-deps --build trust-test
     ;;
@@ -98,7 +101,7 @@ case "${1:-}" in
     docker compose up -d --force-recreate besu
     ;;
   *)
-    echo "Usage: sh scripts/lab.sh {start|test|contract-test|a2a-test|integrated-test|official-a2a-test|authenticated-a2a-test|official-a2a-besu-test|onchain-dpki-test|benchmark|trust-test|stop|reset}" >&2
+    echo "Usage: sh scripts/lab.sh {start|test|contract-test|a2a-test|integrated-test|official-a2a-test|authenticated-a2a-test|official-a2a-besu-test|onchain-dpki-test|benchmark|security-evaluation|trust-test|stop|reset}" >&2
     exit 2
     ;;
 esac
